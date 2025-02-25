@@ -9,12 +9,14 @@ import SwiftUI
 
 @main
 struct SoJournApp: App {
-    let persistenceController = PersistenceController.shared
-
+    @StateObject private var authManager = AuthenticationManager()
+    @StateObject private var tripManager = TripManager.shared
+    
     var body: some Scene {
         WindowGroup {
             ContentView()
-                .environment(\.managedObjectContext, persistenceController.container.viewContext)
+                .environmentObject(authManager)
+                .environmentObject(tripManager)
         }
     }
 }
