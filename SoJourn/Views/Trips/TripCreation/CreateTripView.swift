@@ -17,12 +17,16 @@ struct CreateTripView: View {
     @State private var showMap = false
     @State private var showingChatOverlay = false
     @State private var showingPublishPrompt = false
+    @State private var showingDismissOptions = false
     @State private var itineraryExpanded = false
     @State private var itineraryHeight: CGFloat = 150
     @State private var position: MapCameraPosition = .automatic
     @State private var searchText = ""
     @State private var chatHeight: CGFloat = 400
     @State private var dragOffset: CGFloat = 0
+    @State private var shouldDismissMap = false
+    @State private var showingDraftNamePrompt = false
+    @State private var draftName = ""
     
     // Dummy itinerary data
     let itineraryItems = [
@@ -67,7 +71,8 @@ struct CreateTripView: View {
                 HStack(spacing: 16) {
                     // Dismiss button (exists on both quiz and map)
                     Button {
-                        dismiss()
+                        // Always show dismiss options regardless of which view we're in
+                        showingDismissOptions = true
                     } label: {
                         Image(systemName: "xmark")
                             .font(.system(size: 16, weight: .bold))
@@ -100,18 +105,7 @@ struct CreateTripView: View {
                         .cornerRadius(20)
                         
                         // Chat button (only on map)
-                        Button {
-                            withAnimation(.spring()) {
-                                showingChatOverlay.toggle()
-                            }
-                        } label: {
-                            Image(systemName: "message.fill")
-                                .font(.system(size: 16))
-                                .padding(12)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Circle())
-                                .foregroundColor(.black)
-                        }
+                        chatButton
                     } else {
                         Spacer() // Fill space on quiz screen
                     }
@@ -124,10 +118,7 @@ struct CreateTripView: View {
             .zIndex(2)
             
             // Chat Overlay
-            if showMap && showingChatOverlay {
-                chatOverlay
-                    .zIndex(3)
-            }
+            chatOverlay
             
             // Bottom itinerary drawer (only on map)
             if showMap {
@@ -135,16 +126,89 @@ struct CreateTripView: View {
                     .zIndex(1)
             }
             
-            // Publish Trip Name Prompt
+            // ONLY show ONE dialog at a time with highest z-index
             if showingPublishPrompt {
                 publishPrompt
-                    .zIndex(4)
+                    .zIndex(10)
+            } else if showingDismissOptions {
+                dismissOptionsDialog
+                    .zIndex(10)
+            } else if showingDraftNamePrompt {
+                draftNamePrompt
+                    .zIndex(10)
             }
         }
         .navigationBarHidden(true)
     }
     
     // MARK: - Subviews
+    
+    // Dismiss options dialog
+    private var dismissOptionsDialog: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    showingDismissOptions = false
+                }
+            
+            VStack(spacing: 20) {
+                Text("Exit Trip Creation")
+                    .font(.headline)
+                    .padding(.top)
+                
+                Text("Would you like to save your progress as a draft or discard this trip?")
+                    .multilineTextAlignment(.center)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                
+                Divider()
+                
+                Button {
+                    // Show the draft name prompt instead of immediately saving and dismissing
+                    saveAsDraft()
+                    showingDismissOptions = false
+                } label: {
+                    Text("Save as Draft")
+                        .foregroundColor(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                
+                Divider()
+                
+                Button {
+                    showingDismissOptions = false
+                    dismiss()
+                } label: {
+                    Text("Discard")
+                        .foregroundColor(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                
+                Divider()
+                
+                Button {
+                    showingDismissOptions = false
+                } label: {
+                    Text("Cancel")
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+            }
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .frame(width: 300)
+            .cornerRadius(16)
+            .shadow(radius: 10)
+        }
+    }
     
     // Quiz view for gathering trip preferences
     private var quizView: some View {
@@ -159,71 +223,90 @@ struct CreateTripView: View {
                             .frame(width: 8, height: 8)
                     }
                 }
-                .padding(.top, 60)
+                .padding(.top, 40)
                 
-                Spacer()
+                // Title
+                Text("Plan Your Trip")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .padding(.bottom, 20)
                 
-                // Quiz question
-                switch currentStep {
-                case 0:
-                    quizQuestionView(
-                        icon: "calendar",
-                        title: "When are you traveling?",
-                        content: AnyView(
-                            VStack {
-                                DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                                    .padding(.bottom, 20)
-                                
-                                DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
-                                    .datePickerStyle(.compact)
-                            }
+                // Current question
+                Group {
+                    switch currentStep {
+                    case 0:
+                        quizQuestionView(
+                            icon: "calendar",
+                            title: "When are you traveling?",
+                            content: AnyView(
+                                VStack(spacing: 20) {
+                                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+                                        .datePickerStyle(.compact)
+                                    
+                                    DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
+                                        .datePickerStyle(.compact)
+                                }
+                            )
                         )
-                    )
-                case 1:
-                    quizQuestionView(
-                        icon: "person.2.fill",
-                        title: "Number of travelers",
-                        content: AnyView(
-                            Stepper("\(travelers) travelers", value: $travelers, in: 1...10)
-                                .padding(.horizontal)
+                    case 1:
+                        quizQuestionView(
+                            icon: "person.2.fill",
+                            title: "How many travelers?",
+                            content: AnyView(
+                                Stepper(value: $travelers, in: 1...10) {
+                                    Text("\(travelers) \(travelers == 1 ? "Person" : "People")")
+                                        .font(.title3)
+                                }
+                                .padding()
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.gray.opacity(0.1))
+                                )
+                            )
                         )
-                    )
-                case 2:
-                    quizQuestionView(
-                        icon: "fork.knife",
-                        title: "Any dietary restrictions?",
-                        content: AnyView(
-                            OptionPickerView(selectedOption: $dietaryRestrictions, options: dietOptions)
+                    case 2:
+                        quizQuestionView(
+                            icon: "fork.knife",
+                            title: "Any dietary restrictions?",
+                            content: AnyView(
+                                OptionPickerView(selectedOption: $dietaryRestrictions, options: dietOptions)
+                            )
                         )
-                    )
-                case 3:
-                    quizQuestionView(
-                        icon: "airplane",
-                        title: "Preferred transportation",
-                        content: AnyView(
-                            OptionPickerView(selectedOption: $transportationMode, options: transportationOptions)
+                    case 3:
+                        quizQuestionView(
+                            icon: "car.fill",
+                            title: "How will you travel?",
+                            content: AnyView(
+                                OptionPickerView(selectedOption: $transportationMode, options: transportationOptions)
+                            )
                         )
-                    )
-                case 4:
-                    quizQuestionView(
-                        icon: "house.fill",
-                        title: "Preferred accommodation",
-                        content: AnyView(
-                            OptionPickerView(selectedOption: $accommodation, options: accommodationOptions)
+                    case 4:
+                        quizQuestionView(
+                            icon: "house.fill",
+                            title: "Where will you stay?",
+                            content: AnyView(
+                                OptionPickerView(selectedOption: $accommodation, options: accommodationOptions)
+                            )
                         )
-                    )
-                case 5:
-                    quizQuestionView(
-                        icon: "dollarsign.circle.fill",
-                        title: "Budget range",
-                        content: AnyView(
-                            OptionPickerView(selectedOption: $budget, options: budgetOptions)
+                    case 5:
+                        quizQuestionView(
+                            icon: "dollarsign.circle.fill",
+                            title: "What's your budget?",
+                            content: AnyView(
+                                OptionPickerView(selectedOption: $budget, options: budgetOptions)
+                            )
                         )
-                    )
-                default:
-                    EmptyView()
+                    default:
+                        quizQuestionView(
+                            icon: "sun.max.fill",
+                            title: "Weather preference?",
+                            content: AnyView(
+                                OptionPickerView(selectedOption: $weatherPreference, options: weatherOptions)
+                            )
+                        )
+                    }
                 }
+                .transition(.opacity.combined(with: .scale))
                 
                 Spacer()
                 
@@ -236,12 +319,16 @@ struct CreateTripView: View {
                             }
                         } label: {
                             Text("Back")
-                                .foregroundColor(.primary)
-                                .frame(width: 120, height: 50)
-                                .background(Color.gray.opacity(0.2))
-                                .cornerRadius(25)
+                                .padding()
+                                .frame(width: 120)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.black, lineWidth: 1)
+                                )
                         }
                     }
+                    
+                    Spacer()
                     
                     Button {
                         if currentStep < 5 {
@@ -254,74 +341,346 @@ struct CreateTripView: View {
                             }
                         }
                     } label: {
-                        Text(currentStep < 5 ? "Next" : "Plan my trip")
-                            .foregroundColor(.white)
-                            .frame(width: currentStep > 0 ? 120 : 250, height: 50)
+                        Text(currentStep < 5 ? "Next" : "Create Plan")
+                            .padding()
+                            .frame(width: 160)
                             .background(Color.black)
-                            .cornerRadius(25)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
                     }
                 }
                 .padding(.bottom, 40)
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 24)
         }
-        .background(Color(UIColor.systemBackground))
     }
     
-    // Map view showing the trip plan
+    // Map view with itinerary
     private var mapView: some View {
-        ZStack {
+        ZStack(alignment: .bottom) {
             Map(position: $position) {
-                // Dummy pins
-                Marker("Start", coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194))
-                    .tint(.green)
+                Marker("Starting Point", coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194))
+                Marker("Destination", coordinate: CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730))
                 
-                Marker("Hotel", coordinate: CLLocationCoordinate2D(latitude: 37.7833, longitude: -122.4167))
-                    .tint(.blue)
-                
-                Marker("Restaurant", coordinate: CLLocationCoordinate2D(latitude: 37.7853, longitude: -122.4086))
-                    .tint(.red)
-                
-                Marker("Museum", coordinate: CLLocationCoordinate2D(latitude: 37.7694, longitude: -122.4862))
-                    .tint(.orange)
-                
-                Marker("Beach", coordinate: CLLocationCoordinate2D(latitude: 37.8025, longitude: -122.4382))
-                    .tint(.purple)
-                
-                MapPolyline(coordinates: [
-                    CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                    CLLocationCoordinate2D(latitude: 37.7833, longitude: -122.4167),
-                    CLLocationCoordinate2D(latitude: 37.7853, longitude: -122.4086),
-                    CLLocationCoordinate2D(latitude: 37.7694, longitude: -122.4862),
-                    CLLocationCoordinate2D(latitude: 37.8025, longitude: -122.4382)
-                ])
-                .stroke(.blue, lineWidth: 4)
+                MapPolyline(
+                    coordinates: [
+                        CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                        CLLocationCoordinate2D(latitude: 37.7850, longitude: -122.4350),
+                        CLLocationCoordinate2D(latitude: 37.8000, longitude: -122.4450),
+                        CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730)
+                    ],
+                    contourStyle: .straight
+                )
+                .stroke(.black, lineWidth: 4)
             }
-            .mapStyle(.standard(elevation: .realistic))
             .edgesIgnoringSafeArea(.all)
+            
+            // Itinerary panel at bottom - now with better styling
+            VStack(spacing: 0) {
+                // Drag indicator at the top of the card
+                Rectangle()
+                    .fill(Color.gray)
+                    .frame(width: 40, height: 5)
+                    .cornerRadius(2.5)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+                
+                VStack(alignment: .leading, spacing: 16) {
+                    // Summary when collapsed
+                    if !itineraryExpanded {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Trip to San Francisco")
+                                .font(.headline)
+                                .foregroundColor(.black)
+                            
+                            Text("5 days · $750 total")
+                                .font(.subheadline)
+                                .foregroundColor(.black)
+                            
+                            HStack(spacing: 24) {
+                                Button {
+                                    // Navigate action
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "location.fill")
+                                        Text("Navigate")
+                                    }
+                                    .frame(width: 120)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .background(Color.black)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(20)
+                                    .shadow(radius: 3)
+                                }
+                                
+                                Button {
+                                    showingPublishPrompt = true
+                                } label: {
+                                    Text("Publish Trip")
+                                        .frame(width: 120)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 16)
+                                        .background(Color.black)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(20)
+                                        .shadow(radius: 3)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 12)
+                    } else {
+                        // Full itinerary when expanded
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Trip Itinerary")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundColor(.black)
+                            
+                            Text("San Francisco, CA")
+                                .font(.headline)
+                                .foregroundColor(.black)
+                                
+                            Text("March 15 - March 20, 2025")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                
+                            Text("Total Budget: $750")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                                .padding(.bottom, 8)
+                            
+                            ScrollView {
+                                VStack(spacing: 16) {
+                                    ForEach(itineraryItems) { item in
+                                        itineraryItemView(item)
+                                    }
+                                }
+                            }
+                            .frame(maxHeight: 300)
+                            
+                            HStack(spacing: 24) {
+                                Button {
+                                    // Navigate action
+                                } label: {
+                                    HStack {
+                                        Image(systemName: "location.fill")
+                                        Text("Navigate")
+                                    }
+                                    .frame(width: 120)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .background(Color.black)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(20)
+                                    .shadow(radius: 3)
+                                }
+                                
+                                Button {
+                                    showingPublishPrompt = true
+                                } label: {
+                                    Text("Publish Trip")
+                                        .frame(width: 120)
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 16)
+                                        .background(Color.black)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(20)
+                                        .shadow(radius: 3)
+                                }
+                            }
+                            .padding(.top, 8)
+                        }
+                        .padding(.horizontal)
+                        .padding(.bottom, 16)
+                    }
+                }
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(.ultraThinMaterial)
+                .cornerRadius(20, corners: [.topLeft, .topRight])
+                .shadow(color: .black.opacity(0.2), radius: 6, y: -4)
+        )
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    let threshold: CGFloat = 100
+                    dragOffset = value.translation.height
+                    
+                    if abs(dragOffset) > threshold {
+                        withAnimation(.spring()) {
+                            itineraryExpanded.toggle()
+                            dragOffset = 0
+                        }
+                    }
+                }
+                .onEnded { _ in
+                    withAnimation(.spring()) {
+                        dragOffset = 0
+                    }
+                }
+        )
+        
+        // AI Chat Overlay - positioned lower
+        .overlay(alignment: .bottom) {
+            chatOverlay
         }
     }
     
-    // Draggable itinerary drawer at the bottom
+    // Chat overlay
+    @ViewBuilder
+    private var chatOverlay: some View {
+        if showingChatOverlay {
+            // The overlay itself
+            VStack {
+                // Chat header
+                HStack {
+                    Text("Trip Assistant")
+                        .font(.headline)
+                    
+                    Spacer()
+                    
+                    Button {
+                        withAnimation(.spring()) {
+                            showingChatOverlay = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.gray)
+                    }
+                }
+                .padding()
+                
+                // Chat messages
+                ScrollView {
+                    VStack(spacing: 16) {
+                        ChatBubble(text: "Hi there! I'm your AI travel assistant. How can I help with your trip planning?", isUser: false)
+                        
+                        ChatBubble(text: "I'd like to find some cheaper accommodation options near the city center.", isUser: true)
+                        
+                        ChatBubble(text: "I've found several budget-friendly options in downtown San Francisco, starting at $89 per night. Would you like me to recommend a few?", isUser: false)
+                    }
+                    .padding()
+                }
+                
+                // Chat input
+                HStack {
+                    TextField("Ask anything about your trip...", text: .constant(""))
+                        .padding(12)
+                        .background(Color.gray.opacity(0.1))
+                        .cornerRadius(20)
+                    
+                    Button {
+                        // Send message
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.system(size: 32))
+                            .foregroundColor(.black)
+                    }
+                }
+                .padding(12)
+                .background(.ultraThinMaterial)
+            }
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(.ultraThinMaterial)
+                    .cornerRadius(20, corners: [.topLeft, .topRight])
+                    .shadow(color: .black.opacity(0.2), radius: 6, y: -4)
+            )
+            // Use a ZStack with a transparent background to catch taps outside the chat
+            .zIndex(100) // Ensure it's above other content
+        }
+    }
+    
+    // Bottom itinerary drawer
     private var itineraryDrawer: some View {
-        VStack {
+        VStack(spacing: 0) {
             Spacer()
             
+            // Itinerary panel
             VStack(spacing: 0) {
                 // Drag handle
                 Rectangle()
-                    .fill(Color.gray.opacity(0.5))
-                    .frame(width: 40, height: 4)
-                    .cornerRadius(2)
+                    .fill(Color.gray)
+                    .frame(width: 40, height: 5)
+                    .cornerRadius(2.5)
                     .padding(.vertical, 8)
                 
-                // Itinerary content
-                if itineraryExpanded {
+                if !itineraryExpanded {
+                    // Collapsed view with trip summary
                     VStack(spacing: 16) {
-                        Text("Trip Itinerary")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .padding(.top, 8)
+                        // Summary info
+                        VStack(spacing: 10) {
+                            HStack {
+                                Text("San Francisco Trip")
+                                    .font(.headline)
+                                
+                                Spacer()
+                                
+                                Text("$750")
+                                    .font(.headline)
+                            }
+                            
+                            HStack {
+                                Text("\(itineraryItems.count) activities")
+                                    .foregroundColor(.secondary)
+                                
+                                Spacer()
+                                
+                                Text("5 days")
+                                    .foregroundColor(.secondary)
+                            }
+                        }
+                        
+                        // Action buttons (now below itinerary)
+                        HStack(spacing: 12) {
+                            Button {
+                                // Navigate action
+                            } label: {
+                                HStack {
+                                    Image(systemName: "location.fill")
+                                    Text("Navigate")
+                                }
+                                .frame(width: 120)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                .background(Color.black)
+                                .foregroundColor(.white)
+                                .cornerRadius(20)
+                                .shadow(radius: 3)
+                            }
+                            
+                            Button {
+                                showingPublishPrompt = true
+                            } label: {
+                                Text("Publish Trip")
+                                    .frame(width: 120)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .background(Color.black)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(20)
+                                    .shadow(radius: 3)
+                            }
+                        }
+                    }
+                    .padding()
+                } else {
+                    // Expanded view with full itinerary
+                    VStack(alignment: .leading, spacing: 20) {
+                        HStack {
+                            Text("Trip Itinerary")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                            
+                            Spacer()
+                            
+                            Text("Total: $750")
+                                .font(.headline)
+                        }
                         
                         ScrollView {
                             VStack(spacing: 16) {
@@ -329,243 +688,188 @@ struct CreateTripView: View {
                                     itineraryItemView(item)
                                 }
                             }
-                            .padding(.horizontal)
                         }
-                        .frame(height: UIScreen.main.bounds.height * 0.5)
+                        .frame(maxHeight: UIScreen.main.bounds.height * 0.5)
                         
+                        // Action buttons (consistent with collapsed view)
                         HStack(spacing: 20) {
-                            Button {
-                                // Navigate action (doesn't do anything yet)
-                            } label: {
-                                Text("Navigate")
-                                    .foregroundColor(.white)
-                                    .frame(height: 50)
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.blue)
-                                    .cornerRadius(25)
-                            }
+                            // If the itinerary is expanded, add Spacer() before and after buttons for centering
+                            if itineraryExpanded { Spacer() }
                             
                             Button {
-                                withAnimation {
-                                    showingPublishPrompt = true
-                                }
+                                // Navigate action
                             } label: {
-                                Text("Publish")
-                                    .foregroundColor(.white)
-                                    .frame(height: 50)
-                                    .frame(maxWidth: .infinity)
-                                    .background(Color.black)
-                                    .cornerRadius(25)
-                            }
-                        }
-                        .padding([.horizontal, .bottom])
-                    }
-                } else {
-                    VStack(spacing: 10) {
-                        HStack {
-                            VStack(alignment: .leading) {
-                                Text("5-Day Trip")
-                                    .font(.headline)
-                                
-                                Text("$750 total • San Francisco")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            HStack(spacing: 20) {
-                                Button {
-                                    // Navigate action (doesn't do anything yet)
-                                } label: {
+                                HStack {
+                                    Image(systemName: "location.fill")
                                     Text("Navigate")
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 10)
-                                        .background(Color.blue)
-                                        .cornerRadius(20)
                                 }
-                                
-                                Button {
-                                    withAnimation {
-                                        showingPublishPrompt = true
-                                    }
-                                } label: {
-                                    Text("Publish")
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 20)
-                                        .padding(.vertical, 10)
-                                        .background(Color.black)
-                                        .cornerRadius(20)
-                                }
+                                .frame(width: 120)
+                                .padding(.vertical, 12)
+                                .padding(.horizontal, 16)
+                                .background(Color.black)
+                                .foregroundColor(.white)
+                                .cornerRadius(20)
+                                .shadow(radius: 3)
                             }
+                            
+                            Button {
+                                showingPublishPrompt = true
+                            } label: {
+                                Text("Publish Trip")
+                                    .frame(width: 120)
+                                    .padding(.vertical, 12)
+                                    .padding(.horizontal, 16)
+                                    .background(Color.black)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(20)
+                                    .shadow(radius: 3)
+                            }
+                            
+                            if itineraryExpanded { Spacer() }
                         }
-                        .padding(.horizontal)
-                        .padding(.bottom, 10)
+                        .padding(.top, 16)
+                        .padding(.bottom, itineraryExpanded ? 30 : 16)
                     }
+                    .padding()
                 }
             }
             .background(.ultraThinMaterial)
-            .cornerRadius(20, corners: [.topLeft, .topRight])
+            .cornerRadius(20)
             .shadow(radius: 5)
-            .frame(height: itineraryExpanded ? UIScreen.main.bounds.height * 0.7 : 120)
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        if value.translation.height < 0 && !itineraryExpanded {
+                        dragOffset = value.translation.height
+                    }
+                    .onEnded { value in
+                        if value.translation.height < -50 {
                             withAnimation(.spring()) {
                                 itineraryExpanded = true
                             }
-                        } else if value.translation.height > 0 && itineraryExpanded {
+                        } else if value.translation.height > 50 {
                             withAnimation(.spring()) {
                                 itineraryExpanded = false
                             }
                         }
+                        dragOffset = 0
                     }
             )
         }
     }
-
-    // Chat overlay with AI assistant
-    private var chatOverlay: some View {
-        VStack {
-            HStack {
-                Spacer()
-                
-                VStack(spacing: 0) {
-                    // Header
-                    HStack {
-                        Text("AI Assistant")
-                            .font(.headline)
-                        
-                        Spacer()
-                        
-                        // Close button (closes only the chat)
-                        Button {
-                            withAnimation(.spring()) {
-                                showingChatOverlay = false
-                            }
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.headline)
-                                .padding(8)
-                                .foregroundColor(.black)
-                        }
-                    }
-                    .padding()
-                    .background(.ultraThinMaterial)
-                    
-                    // Drag handle
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.5))
-                        .frame(width: 40, height: 4)
-                        .cornerRadius(2)
-                        .padding(.vertical, 8)
-                        .gesture(
-                            DragGesture()
-                                .onChanged { value in
-                                    let newHeight = chatHeight - value.translation.height
-                                    if newHeight >= 200 && newHeight <= 500 {
-                                        chatHeight = newHeight
-                                    }
-                                }
-                        )
-                    
-                    // Chat content
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            ChatBubble(text: "Hi! I'm your AI travel assistant. How can I help with your trip planning?", isUser: false)
-                            
-                            ChatBubble(text: "Can you suggest some activities in San Francisco?", isUser: true)
-                            
-                            ChatBubble(text: "I've added some popular attractions to your itinerary: Golden Gate Bridge, Alcatraz Island, Fisherman's Wharf, and Chinatown. Would you like more suggestions?", isUser: false)
-                            
-                            ChatBubble(text: "Find me a cheaper hotel option", isUser: true)
-                            
-                            ChatBubble(text: "I've found a budget-friendly hotel in Union Square for $150/night. Would you like me to update your itinerary?", isUser: false)
-                        }
-                        .padding()
-                    }
-                    
-                    // Message input
-                    HStack {
-                        TextField("Type a message...", text: .constant(""))
-                            .padding(12)
-                            .background(Color.gray.opacity(0.1))
-                            .cornerRadius(20)
-                        
-                        Button {
-                            // Send message
-                        } label: {
-                            Image(systemName: "arrow.up.circle.fill")
-                                .font(.system(size: 30))
-                                .foregroundColor(.black)
-                        }
-                    }
-                    .padding()
-                }
-                .frame(width: 320, height: chatHeight)
-                .background(.ultraThinMaterial)
-                .cornerRadius(20)
-                .shadow(radius: 5)
-                .padding()
-            }
-        }
-    }
     
-    // Publish prompt for naming the trip
+    // Publish trip prompt
     private var publishPrompt: some View {
         ZStack {
+            // Background blur
             Color.black.opacity(0.4)
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {
-                    withAnimation {
-                        showingPublishPrompt = false
-                    }
+                    showingPublishPrompt = false
                 }
             
             VStack(spacing: 20) {
                 Text("Name Your Trip")
-                    .font(.title2)
-                    .fontWeight(.bold)
+                    .font(.headline)
                 
-                TextField("Enter trip name", text: $tripName)
+                TextField("My Amazing Trip", text: $tripName)
                     .padding()
                     .background(Color.gray.opacity(0.1))
-                    .cornerRadius(10)
+                    .cornerRadius(8)
                 
-                HStack(spacing: 20) {
+                HStack(spacing: 16) {
                     Button {
-                        withAnimation {
-                            showingPublishPrompt = false
-                        }
+                        showingPublishPrompt = false
                     } label: {
                         Text("Cancel")
-                            .foregroundColor(.primary)
-                            .frame(height: 50)
-                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
                             .background(Color.gray.opacity(0.2))
-                            .cornerRadius(10)
+                            .foregroundColor(.black)
+                            .cornerRadius(20)
                     }
                     
                     Button {
+                        // Make sure this calls publishTrip directly
                         publishTrip()
                     } label: {
-                        Text("Save")
-                            .foregroundColor(.white)
-                            .frame(height: 50)
-                            .frame(maxWidth: .infinity)
+                        Text("Publish")
+                            .padding(.vertical, 12)
+                            .padding(.horizontal, 16)
                             .background(Color.black)
-                            .cornerRadius(10)
+                            .foregroundColor(.white)
+                            .cornerRadius(20)
                     }
-                    .disabled(tripName.isEmpty)
                 }
             }
-            .padding()
-            .background(Color(UIColor.systemBackground))
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+                    .shadow(radius: 10)
+            )
+            .padding(24)
+        }
+    }
+    
+    // Draft name prompt
+    private var draftNamePrompt: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    // Don't dismiss on tap outside - user must choose an option
+                }
+            
+            VStack(spacing: 20) {
+                Text("Name Your Draft")
+                    .font(.headline)
+                    .padding(.top)
+                
+                Text("Give your draft trip a name so you can find it later.")
+                    .multilineTextAlignment(.center)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal)
+                
+                TextField("Trip Name", text: $draftName)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(8)
+                    .padding(.horizontal)
+                
+                Divider()
+                
+                Button {
+                    // Save the draft with the provided name
+                    saveDraftWithName()
+                    showingDraftNamePrompt = false
+                    dismiss()
+                } label: {
+                    Text("Save Draft")
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                
+                Divider()
+                
+                Button {
+                    showingDraftNamePrompt = false
+                } label: {
+                    Text("Cancel")
+                        .fontWeight(.medium)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+            }
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color.white)
+            )
+            .frame(width: 300)
             .cornerRadius(16)
             .shadow(radius: 10)
-            .padding(.horizontal, 40)
         }
     }
     
@@ -590,8 +894,16 @@ struct CreateTripView: View {
         .frame(maxWidth: .infinity)
     }
     
+    // Save the trip as a draft
+    private func saveAsDraft() {
+        // Show the name prompt instead of immediately saving
+        draftName = tripName.isEmpty ? "" : tripName
+        showingDraftNamePrompt = true
+    }
+    
     // Helper function to create a trip and dismiss
     private func publishTrip() {
+        print("Publishing trip: \(tripName)")
         let activities = itineraryItems.map { item in
             // Parse the time string to get a date
             let dateFormatter = DateFormatter()
@@ -624,8 +936,33 @@ struct CreateTripView: View {
             activities: activities
         )
         
+        print("Adding trip to tripManager")
         tripManager.addTrip(trip)
         dismiss()
+    }
+    
+    // Add a helper method to save the draft with the entered name
+    private func saveDraftWithName() {
+        // Use the entered name if provided, otherwise use a default
+        let name = draftName.isEmpty ? "Untitled Trip" : draftName
+        
+        // Create a new trip and mark as draft
+        let newTrip = Trip(
+            id: UUID(),
+            title: name,
+            destination: "San Francisco", // Using default destination
+            startDate: startDate,
+            endDate: endDate,
+            notes: "Draft trip created on \(Date().formatted(date: .abbreviated, time: .shortened))",
+            status: .upcoming,
+            isArchived: false,
+            isDraft: true,
+            isShared: false,
+            activities: [] // Empty activities list for draft
+        )
+        
+        // Save to trip manager
+        tripManager.addTrip(newTrip)
     }
     
     // Helper view to display an itinerary item
@@ -634,19 +971,21 @@ struct CreateTripView: View {
             HStack {
                 Text(item.day)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.black)
                 
                 Spacer()
                 
                 Text(item.time)
                     .font(.subheadline)
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.black)
             }
             
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(item.title)
                         .font(.headline)
+                        .foregroundColor(.black)
                     
                     Text(item.description)
                         .font(.subheadline)
@@ -657,11 +996,32 @@ struct CreateTripView: View {
                 
                 Text(item.cost)
                     .fontWeight(.semibold)
+                    .foregroundColor(.black)
             }
         }
         .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.gray.opacity(0.1))
+        )
+    }
+    
+    // Find the chat button and update it to match the X button style
+    private var chatButton: some View {
+        Button {
+            if !showingChatOverlay {
+                withAnimation(.spring()) {
+                    showingChatOverlay = true
+                }
+            }
+        } label: {
+            Image(systemName: "message.fill")
+                .font(.system(size: 16, weight: .bold))
+                .padding(12)
+                .background(.ultraThinMaterial)
+                .clipShape(Circle())
+                .foregroundColor(.black)
+        }
     }
 }
 

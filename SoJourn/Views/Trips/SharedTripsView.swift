@@ -2,12 +2,14 @@ import SwiftUI
 
 struct SharedTripsView: View {
     @EnvironmentObject private var tripManager: TripManager
+    @State private var selectedTrip: Trip?
+    @State private var showingShareSheet = false
     
     var body: some View {
         NavigationView {
             VStack {
                 if tripManager.trips.filter({ $0.isShared }).isEmpty {
-                    VStack(spacing: 20) {
+                    VStack {
                         Image(systemName: "person.2.circle")
                             .font(.system(size: 70))
                             .foregroundColor(.gray)
@@ -23,12 +25,22 @@ struct SharedTripsView: View {
                     .padding()
                 } else {
                     List(tripManager.trips.filter { $0.isShared }) { trip in
-                        TripCard(trip: trip)
+                        Button {
+                            selectedTrip = trip
+                            showingShareSheet = true
+                        } label: {
+                            TripCard(trip: trip)
+                        }
                     }
                     .listStyle(.plain)
                 }
             }
             .navigationTitle("Shared Trips")
+            .sheet(isPresented: $showingShareSheet, content: {
+                if let trip = selectedTrip {
+                    TripSharingView(trip: trip)
+                }
+            })
         }
         .accentColor(.black)
     }

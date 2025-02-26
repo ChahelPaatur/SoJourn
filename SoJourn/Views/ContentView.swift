@@ -12,6 +12,8 @@ struct ContentView: View {
     @StateObject private var authManager = AuthenticationManager.shared
     @State private var selectedTab = 0
     @State private var showingNewTripSheet = false
+    @State private var selectedTrip: Trip?
+    @State private var showingEditView = false
     
     var body: some View {
         Group {
@@ -25,6 +27,20 @@ struct ContentView: View {
         }
         .environmentObject(tripManager)
         .environmentObject(authManager)
+        .onReceive(tripManager.$isEditingTrip) { isEditing in
+            if isEditing, let tripId = tripManager.tripToEdit {
+                self.selectedTrip = tripManager.trips.first(where: { $0.id == tripId })
+                self.showingEditView = true
+            }
+        }
+        .sheet(isPresented: $showingEditView, onDismiss: {
+            tripManager.isEditingTrip = false
+            tripManager.tripToEdit = nil
+        }) {
+            if let trip = selectedTrip {
+                EditTripView(trip: trip)
+            }
+        }
     }
     
     private var mainView: some View {
@@ -36,7 +52,7 @@ struct ContentView: View {
                     }
                     .tag(0)
                 
-                TripSharingView()
+                SharedTripsView()
                     .tabItem {
                         Label("Shared", systemImage: "person.2")
                     }
@@ -61,6 +77,18 @@ struct ContentView: View {
                     .tag(4)
             }
             .accentColor(.black)
+            .onAppear {
+                // Set navigation bar appearance to white
+                let appearance = UINavigationBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = .white
+                appearance.titleTextAttributes = [.foregroundColor: UIColor.black]
+                appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.black]
+                
+                UINavigationBar.appearance().standardAppearance = appearance
+                UINavigationBar.appearance().compactAppearance = appearance
+                UINavigationBar.appearance().scrollEdgeAppearance = appearance
+            }
             
             // Floating plus button (positioned higher)
             if selectedTab == 0 {
