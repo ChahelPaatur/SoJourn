@@ -16,41 +16,49 @@ struct TripsHomeView: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                // Filter tabs
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 20) {
-                        FilterButton(title: "All", isSelected: selectedFilter == .all) {
-                            selectedFilter = .all
-                        }
-                        
-                        FilterButton(title: "Upcoming", isSelected: selectedFilter == .upcoming) {
-                            selectedFilter = .upcoming
-                        }
-                        
-                        FilterButton(title: "Drafts", isSelected: selectedFilter == .drafted) {
-                            selectedFilter = .drafted
-                        }
-                        
-                        FilterButton(title: "Archived", isSelected: selectedFilter == .archived) {
-                            selectedFilter = .archived
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 10)
-                
-                // Trip list with dynamic filtering
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(filteredTrips) { trip in
-                            NavigationLink(destination: TripDetailView(trip: trip)) {
-                                TripCard(trip: trip)
+            ScrollView {
+                VStack(spacing: 24) {
+                    // Filter tabs
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 20) {
+                            FilterButton(title: "All", isSelected: selectedFilter == .all) {
+                                selectedFilter = .all
+                            }
+                            
+                            FilterButton(title: "Upcoming", isSelected: selectedFilter == .upcoming) {
+                                selectedFilter = .upcoming
+                            }
+                            
+                            FilterButton(title: "Drafts", isSelected: selectedFilter == .drafted) {
+                                selectedFilter = .drafted
+                            }
+                            
+                            FilterButton(title: "Archived", isSelected: selectedFilter == .archived) {
+                                selectedFilter = .archived
                             }
                         }
+                        .padding(.horizontal)
                     }
-                    .padding()
+                    .padding(.vertical, 10)
+                    
+                    // Trip list with dynamic filtering
+                    VStack(alignment: .leading) {
+                        Text("Your Trips")
+                            .font(.headline)
+                            .foregroundColor(.foreground)
+                            .padding(.horizontal)
+                        
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredTrips) { trip in
+                                NavigationLink(destination: TripDetailView(trip: trip)) {
+                                    TripCard(trip: trip)
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
                 }
+                .padding(.vertical)
             }
             .navigationTitle("My Trips")
             .searchable(text: $searchText, prompt: "Search trips")

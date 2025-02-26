@@ -76,18 +76,36 @@ struct ContentView: View {
                     }
                     .tag(4)
             }
-            .accentColor(.black)
+            .accentColor(.accent)
             .onAppear {
-                // Set navigation bar appearance to white
-                let appearance = UINavigationBarAppearance()
+                // Set the inactive tab color
+                let appearance = UITabBarAppearance()
                 appearance.configureWithOpaqueBackground()
-                appearance.backgroundColor = .white
-                appearance.titleTextAttributes = [.foregroundColor: UIColor.black]
-                appearance.largeTitleTextAttributes = [.foregroundColor: UIColor.black]
                 
-                UINavigationBar.appearance().standardAppearance = appearance
-                UINavigationBar.appearance().compactAppearance = appearance
-                UINavigationBar.appearance().scrollEdgeAppearance = appearance
+                // Set background color
+                appearance.backgroundColor = UIColor.systemBackground
+                
+                // Set inactive tab color
+                let inactiveColor = UIColor { traitCollection in
+                    return traitCollection.userInterfaceStyle == .dark ? .white : .gray
+                }
+                
+                appearance.stackedLayoutAppearance.normal.iconColor = inactiveColor
+                appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
+                
+                // Set active tab color - yellow in dark mode, black in light mode
+                let activeColor = UIColor { traitCollection in
+                    return traitCollection.userInterfaceStyle == .dark ? 
+                        UIColor(Color.sojourYellow) : .black
+                }
+                
+                appearance.stackedLayoutAppearance.selected.iconColor = activeColor
+                appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: activeColor]
+                
+                UITabBar.appearance().standardAppearance = appearance
+                if #available(iOS 15.0, *) {
+                    UITabBar.appearance().scrollEdgeAppearance = appearance
+                }
             }
             
             // Floating plus button (positioned higher)
@@ -95,13 +113,16 @@ struct ContentView: View {
                 VStack {
                     Spacer()
                     
-                    Button {
+                    Button(action: {
                         showingNewTripSheet = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 54))
-                            .foregroundColor(.black)
-                            .shadow(radius: 4)
+                    }) {
+                        Image(systemName: "plus")
+                            .font(.title.weight(.semibold))
+                            .foregroundColor(Color.buttonText)
+                            .frame(width: 56, height: 56)
+                            .background(Color.buttonBackground)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 2)
                     }
                     .padding(.bottom, 90) // Position higher than before
                     

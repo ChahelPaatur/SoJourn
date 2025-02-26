@@ -149,15 +149,49 @@ struct PreferenceQuizView: View {
                         switch currentQuestionIndex {
                         case 0: // Gender
                             ForEach(["Male", "Female", "Prefer not to say"], id: \.self) { option in
-                                OptionButton(title: option, isSelected: selectedGender == option) {
+                                Button(action: {
                                     selectedGender = option
+                                }) {
+                                    Text(option)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(selectedGender == option ? Color.selectedOption : Color.clear)
+                                        .foregroundColor(
+                                            selectedGender == option ?
+                                            Color(UIColor { traitCollection in
+                                                return traitCollection.userInterfaceStyle == .dark ? .black : .black
+                                            }) :
+                                            .foreground
+                                        )
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.cardBorder, lineWidth: 1)
+                                        )
                                 }
                             }
                             
                         case 1: // Weather
                             ForEach(["Tropic", "Cold", "Sunny", "Other"], id: \.self) { option in
-                                OptionButton(title: option, isSelected: selectedWeather == option) {
+                                Button(action: {
                                     selectedWeather = option
+                                }) {
+                                    Text(option)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(selectedWeather == option ? Color.selectedOption : Color.clear)
+                                        .foregroundColor(
+                                            selectedWeather == option ?
+                                            Color(UIColor { traitCollection in
+                                                return traitCollection.userInterfaceStyle == .dark ? .black : .black
+                                            }) :
+                                            .foreground
+                                        )
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.cardBorder, lineWidth: 1)
+                                        )
                                 }
                             }
                             
@@ -199,8 +233,25 @@ struct PreferenceQuizView: View {
                             
                         case 5: // Discovery
                             ForEach(["Instagram", "TikTok", "Friends", "Other"], id: \.self) { option in
-                                OptionButton(title: option, isSelected: discoverySource == option) {
+                                Button(action: {
                                     discoverySource = option
+                                }) {
+                                    Text(option)
+                                        .padding()
+                                        .frame(maxWidth: .infinity)
+                                        .background(discoverySource == option ? Color.selectedOption : Color.clear)
+                                        .foregroundColor(
+                                            discoverySource == option ?
+                                            Color(UIColor { traitCollection in
+                                                return traitCollection.userInterfaceStyle == .dark ? .black : .black
+                                            }) :
+                                            .foreground
+                                        )
+                                        .cornerRadius(8)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 8)
+                                                .stroke(Color.cardBorder, lineWidth: 1)
+                                        )
                                 }
                             }
                         default:

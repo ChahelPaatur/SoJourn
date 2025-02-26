@@ -17,6 +17,7 @@ struct SoJournApp: App {
             ContentView()
                 .environmentObject(authManager)
                 .environmentObject(tripManager)
+                .preferredColorScheme(.dark)
         }
     }
 }
