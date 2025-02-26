@@ -1,0 +1,3 @@
+# SoJourn
+
+MAKE TRIP PLANNING EASIER
