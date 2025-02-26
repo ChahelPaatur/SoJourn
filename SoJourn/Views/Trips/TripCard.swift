@@ -2,7 +2,8 @@ import SwiftUI
 import Foundation
 
 struct TripCard: View {
-    let trip: Trip
+    let trip: Trip 
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -51,10 +52,10 @@ struct TripCard: View {
                     }
                 }
                 .padding()
-                .background(Color.white)
+                .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color.white)
                 .cornerRadius(12, corners: [.bottomLeft, .bottomRight])
             }
-            .background(Color.white)
+            .background(colorScheme == .dark ? Color(UIColor.systemGray6) : Color.white)
             .cornerRadius(12)
             .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
             

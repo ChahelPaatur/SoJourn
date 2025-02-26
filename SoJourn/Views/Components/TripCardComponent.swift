@@ -8,7 +8,7 @@ struct TripCardComponent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Image - different style for drafts
-            ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .topTrailing) { 
                 Rectangle()
                     .fill(trip.isDraft ? Color.gray.opacity(0.2) : Color.gray.opacity(0.3))
                     .aspectRatio(trip.isDraft ? 3/1 : 16/9, contentMode: .fit) // Shorter for drafts

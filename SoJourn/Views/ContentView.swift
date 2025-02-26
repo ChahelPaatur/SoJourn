@@ -48,31 +48,31 @@ struct ContentView: View {
             TabView(selection: $selectedTab) {
                 TripsHomeView()
                     .tabItem {
-                        Label("Trips", systemImage: "airplane")
+                        Label("Trips", systemImage: "airplane.departure")
                     }
                     .tag(0)
                 
                 SharedTripsView()
                     .tabItem {
-                        Label("Shared", systemImage: "person.2")
+                        Label("Shared", systemImage: "person.2.fill")
                     }
                     .tag(1)
                 
                 DiscoverView()
                     .tabItem {
-                        Label("Discover", systemImage: "magnifyingglass")
+                        Label("Discover", systemImage: "safari.fill")
                     }
                     .tag(2)
                 
                 CompletedTripsView()
                     .tabItem {
-                        Label("Past", systemImage: "clock.arrow.circlepath")
+                        Label("Past", systemImage: "photo.stack.fill")
                     }
                     .tag(3)
                 
                 ProfileView()
                     .tabItem {
-                        Label("Account", systemImage: "person.circle")
+                        Label("Account", systemImage: "person.crop.circle.fill")
                     }
                     .tag(4)
             }
@@ -87,16 +87,17 @@ struct ContentView: View {
                 
                 // Set inactive tab color
                 let inactiveColor = UIColor { traitCollection in
-                    return traitCollection.userInterfaceStyle == .dark ? .white : .gray
+                    return traitCollection.userInterfaceStyle == .dark ? 
+                        UIColor.systemGray3 : UIColor.systemGray
                 }
                 
                 appearance.stackedLayoutAppearance.normal.iconColor = inactiveColor
                 appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: inactiveColor]
                 
-                // Set active tab color - yellow in dark mode, black in light mode
+                // Set active tab color - Pinterest-inspired accent in dark mode, deeper accent in light mode
                 let activeColor = UIColor { traitCollection in
                     return traitCollection.userInterfaceStyle == .dark ? 
-                        UIColor(Color.sojourYellow) : .black
+                        UIColor(Color.sojourYellow) : UIColor(Color.accent)
                 }
                 
                 appearance.stackedLayoutAppearance.selected.iconColor = activeColor
@@ -108,7 +109,7 @@ struct ContentView: View {
                 }
             }
             
-            // Floating plus button (positioned higher)
+            // Floating action button with Pinterest-inspired styling
             if selectedTab == 0 {
                 VStack {
                     Spacer()
@@ -116,17 +117,23 @@ struct ContentView: View {
                     Button(action: {
                         showingNewTripSheet = true
                     }) {
-                        Image(systemName: "plus")
-                            .font(.title.weight(.semibold))
-                            .foregroundColor(Color.buttonText)
-                            .frame(width: 56, height: 56)
-                            .background(Color.buttonBackground)
-                            .clipShape(Circle())
-                            .shadow(color: Color.black.opacity(0.15), radius: 5, x: 0, y: 2)
+                        ZStack {
+                            // Primary circle
+                            Circle()
+                                .fill(Color.buttonBackground)
+                                .frame(width: 60, height: 60)
+                                .shadow(color: Color.black.opacity(0.2), radius: 8, x: 0, y: 3)
+                            
+                            // Plus icon
+                            Image(systemName: "plus")
+                                .font(.system(size: 24, weight: .medium))
+                                .foregroundColor(Color.buttonText)
+                        }
                     }
-                    .padding(.bottom, 90) // Position higher than before
+                    .padding(.bottom, 85)
+                    .accessibilityLabel("Create New Trip")
                     
-                    Spacer().frame(height: 0) // Push button up from bottom
+                    Spacer().frame(height: 0)
                 }
                 .frame(maxWidth: .infinity, alignment: .center)
                 .fullScreenCover(isPresented: $showingNewTripSheet) {

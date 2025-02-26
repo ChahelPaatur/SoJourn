@@ -61,6 +61,7 @@ struct TripsHomeView: View {
                 .padding(.vertical)
             }
             .navigationTitle("My Trips")
+            .navigationBarItems(trailing: AccountButton())
             .searchable(text: $searchText, prompt: "Search trips")
         }
     }
@@ -99,7 +100,7 @@ struct FilterButton: View {
                 .fontWeight(isSelected ? .bold : .regular)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 16)
-                .background(isSelected ? Color.black : Color.clear)
+                .background(isSelected ? Color.black : Color.white)
                 .foregroundColor(isSelected ? .white : .black)
                 .cornerRadius(20)
         }

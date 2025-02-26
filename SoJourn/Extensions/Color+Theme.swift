@@ -2,6 +2,13 @@ import SwiftUI
 
 extension Color {
     static let sojourn = SojournTheme()
+    // static let accent = Color("AccentColor")
+    // static let accentSecondary = Color("AccentSecondaryColor")
+    // static let sojourYellow = Color("SojourYellow")
+    
+    // static var primaryText: Color { ... }
+    // static var secondaryText: Color { ... }
+    // static var cardBackground: Color { ... }
 }
 
 struct SojournTheme {

@@ -2,6 +2,7 @@ import SwiftUI
 import MapKit
 
 struct CreateTripView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var tripManager: TripManager
     @State private var currentStep = 0
@@ -171,7 +172,7 @@ struct CreateTripView: View {
                     showingDismissOptions = false
                 } label: {
                     Text("Save as Draft")
-                        .foregroundColor(.blue)
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                 }
@@ -202,14 +203,14 @@ struct CreateTripView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
+                    .fill(colorScheme == .dark ? Color(UIColor.systemGray6) : Color.white)
             )
             .frame(width: 300)
             .cornerRadius(16)
             .shadow(radius: 10)
         }
     }
-    
+   
     // Quiz view for gathering trip preferences
     private var quizView: some View {
         VStack {
@@ -219,7 +220,7 @@ struct CreateTripView: View {
                 HStack(spacing: 6) {
                     ForEach(0..<6) { step in
                         Circle()
-                            .fill(step == currentStep ? Color.black : Color.gray.opacity(0.3))
+                            .fill(step == currentStep ? Color.black : Color.gray.opacity(0.6))
                             .frame(width: 8, height: 8)
                     }
                 }
@@ -242,9 +243,11 @@ struct CreateTripView: View {
                                 VStack(spacing: 20) {
                                     DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                                         .datePickerStyle(.compact)
+                                        .accentColor(Color(UIColor.label))
                                     
                                     DatePicker("End Date", selection: $endDate, in: startDate..., displayedComponents: .date)
                                         .datePickerStyle(.compact)
+                                        .accentColor(Color(UIColor.label))
                                 }
                             )
                         )
@@ -578,7 +581,7 @@ struct CreateTripView: View {
                     } label: {
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 32))
-                            .foregroundColor(.black)
+                            .foregroundColor(Color(UIColor.label))
                     }
                 }
                 .padding(12)
@@ -784,7 +787,7 @@ struct CreateTripView: View {
                             .padding(.vertical, 12)
                             .padding(.horizontal, 16)
                             .background(Color.gray.opacity(0.2))
-                            .foregroundColor(.black)
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
                             .cornerRadius(20)
                     }
                     
@@ -804,7 +807,7 @@ struct CreateTripView: View {
             .padding(24)
             .background(
                 RoundedRectangle(cornerRadius: 16)
-                    .fill(Color.white)
+                    .fill(Color(UIColor.systemBackground))
                     .shadow(radius: 10)
             )
             .padding(24)
@@ -880,7 +883,7 @@ struct CreateTripView: View {
         VStack(spacing: 30) {
             Image(systemName: icon)
                 .font(.system(size: 50))
-                .foregroundColor(.black)
+                .foregroundColor(Color(UIColor.label))
             
             Text(title)
                 .font(.title2)
@@ -1038,6 +1041,7 @@ struct ItineraryItem: Identifiable {
 struct OptionPickerView: View {
     @Binding var selectedOption: String
     let options: [String]
+    @Environment(\.colorScheme) private var colorScheme
     
     var body: some View {
         VStack(spacing: 12) {
@@ -1053,13 +1057,15 @@ struct OptionPickerView: View {
                         
                         if selectedOption == option {
                             Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.black)
+                                .foregroundColor(colorScheme == .dark ? .yellow : .black)
                         }
                     }
                     .padding()
                     .background(
                         RoundedRectangle(cornerRadius: 12)
-                            .fill(selectedOption == option ? Color.black.opacity(0.1) : Color.gray.opacity(0.1))
+                            .fill(selectedOption == option ? 
+                                  (colorScheme == .dark ? Color.yellow.opacity(0.75) : Color.black.opacity(0.1)) 
+                                  : Color.gray.opacity(0.1))
                     )
                 }
             }

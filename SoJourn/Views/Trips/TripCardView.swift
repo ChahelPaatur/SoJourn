@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TripCardView: View {
-    let trip: Trip
+    let trip: Trip 
     @State private var tripProperties: [String] = []
     
     var body: some View {
