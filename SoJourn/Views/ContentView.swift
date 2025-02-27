@@ -54,7 +54,7 @@ struct ContentView: View {
                 
                 SharedTripsView()
                     .tabItem {
-                        Label("Shared", systemImage: "person.2.fill")
+                        Label("Friends", systemImage: "person.2.fill")
                     }
                     .tag(1)
                 
