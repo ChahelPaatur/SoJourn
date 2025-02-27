@@ -100,8 +100,8 @@ struct FilterButton: View {
                 .fontWeight(isSelected ? .bold : .regular)
                 .padding(.vertical, 8)
                 .padding(.horizontal, 16)
-                .background(isSelected ? Color.black : Color.white)
-                .foregroundColor(isSelected ? .white : .black)
+                .background(isSelected ? Color(UIColor.label) : Color.clear)
+                .foregroundColor(isSelected ? Color(UIColor.systemBackground) : Color(UIColor.label) )
                 .cornerRadius(20)
         }
     }

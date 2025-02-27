@@ -63,7 +63,7 @@ struct ProfileView: View {
     private var notificationsSection: some View {
         Section {
             Toggle("Notifications", isOn: $authManager.userProfile.notificationsEnabled)
-                .tint(authManager.userProfile.notificationsEnabled ? Color.green : .black)
+                .tint(authManager.userProfile.notificationsEnabled ? Color.blue : .black)
             Toggle("Email Notifications", isOn: $authManager.userProfile.emailNotificationsEnabled)
                 .tint(authManager.userProfile.emailNotificationsEnabled ? Color.blue : .black)
         } header: {
