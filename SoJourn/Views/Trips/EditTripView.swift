@@ -1,5 +1,6 @@
 import SwiftUI
-import MapKit
+import MapboxMaps  // Uncommented MapboxMaps import
+import CoreLocation
 
 struct EditTripView: View {
     @Environment(\.dismiss) private var dismiss
@@ -15,10 +16,8 @@ struct EditTripView: View {
     @State private var activities: [Activity]
     @State private var showingMap = false
     @State private var selectedActivity: Activity? = nil
-    @State private var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-        span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-    )
+    @State private var centerCoordinate = CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194)
+    @State private var zoomLevel: Double = 12
     
     init(trip: Trip) {
         self.trip = trip
@@ -29,13 +28,10 @@ struct EditTripView: View {
         _notes = State(initialValue: trip.notes)
         _activities = State(initialValue: trip.activities)
         
-        // Set initial map region based on first activity location if available
+        // Set initial map center based on first activity location if available
         if let firstActivity = trip.activities.first, 
            let location = firstActivity.location {
-            _region = State(initialValue: MKCoordinateRegion(
-                center: location,
-                span: MKCoordinateSpan(latitudeDelta: 0.05, longitudeDelta: 0.05)
-            ))
+            _centerCoordinate = State(initialValue: location)
         }
     }
     
@@ -96,24 +92,14 @@ struct EditTripView: View {
                 if showingMap {
                     ZStack(alignment: .bottom) {
                         // Map view covering the bottom half
-                        Map(coordinateRegion: $region, annotationItems: activities.filter { $0.location != nil }) { activity in
-                            MapAnnotation(coordinate: activity.location!) {
-                                VStack {
-                                    Text(activity.title)
-                                        .font(.caption)
-                                        .padding(4)
-                                        .background(Color.white.opacity(0.8))
-                                        .cornerRadius(4)
-                                    
-                                    Image(systemName: "mappin.circle.fill")
-                                        .font(.title)
-                                        .foregroundColor(.red)
-                                }
-                                .onTapGesture {
-                                    selectedActivity = activity
-                                }
-                            }
-                        }
+                        MapboxMapView(
+                            centerCoordinate: centerCoordinate,
+                            zoomLevel: zoomLevel,
+                            markers: activities.filter { $0.location != nil }.map { activity in
+                                MapMarker(coordinate: activity.location!, title: activity.title)
+                            },
+                            routeCoordinates: activities.filter { $0.location != nil }.map { $0.location! }
+                        )
                         .frame(height: UIScreen.main.bounds.height * 0.6)
                         .ignoresSafeArea(edges: .bottom)
                         
@@ -280,7 +266,7 @@ struct EditTripView: View {
         )
         // Set location after creation
         var mutableActivity = newActivity
-        mutableActivity.location = region.center
+        mutableActivity.location = centerCoordinate
         activities.append(mutableActivity)
         selectedActivity = mutableActivity
     }

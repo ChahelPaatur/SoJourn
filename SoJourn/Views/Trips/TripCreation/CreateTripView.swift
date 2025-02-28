@@ -1,5 +1,6 @@
 import SwiftUI
-import MapKit
+import CoreLocation
+import MapboxMaps  // Uncommented MapboxMaps import
 
 struct CreateTripView: View {
     @Environment(\.colorScheme) private var colorScheme
@@ -21,7 +22,8 @@ struct CreateTripView: View {
     @State private var showingDismissOptions = false
     @State private var itineraryExpanded = false
     @State private var itineraryHeight: CGFloat = 150
-    @State private var position: MapCameraPosition = .automatic
+    // Use proper Mapbox camera position
+    @State private var position = CameraOptions(center: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194), zoom: 12)
     @State private var searchText = ""
     @State private var chatHeight: CGFloat = 400
     @State private var dragOffset: CGFloat = 0
@@ -361,21 +363,20 @@ struct CreateTripView: View {
     // Map view with itinerary
     private var mapView: some View {
         ZStack(alignment: .bottom) {
-            Map(position: $position) {
-                Marker("Starting Point", coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194))
-                Marker("Destination", coordinate: CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730))
-                
-                MapPolyline(
-                    coordinates: [
-                        CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
-                        CLLocationCoordinate2D(latitude: 37.7850, longitude: -122.4350),
-                        CLLocationCoordinate2D(latitude: 37.8000, longitude: -122.4450),
-                        CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730)
-                    ],
-                    contourStyle: .straight
-                )
-                .stroke(.black, lineWidth: 4)
-            }
+            MapboxMapView(
+                centerCoordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                zoomLevel: 12,
+                markers: [
+                    MapMarker(coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194), title: "Starting Point"),
+                    MapMarker(coordinate: CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730), title: "Destination")
+                ],
+                routeCoordinates: [
+                    CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                    CLLocationCoordinate2D(latitude: 37.7850, longitude: -122.4350),
+                    CLLocationCoordinate2D(latitude: 37.8000, longitude: -122.4450),
+                    CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730)
+                ]
+            )
             .edgesIgnoringSafeArea(.all)
             
             // Itinerary panel at bottom - now with better styling

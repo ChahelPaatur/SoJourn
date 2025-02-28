@@ -1,0 +1,96 @@
+import SwiftUI
+import MapboxMaps
+import CoreLocation
+
+struct MapMarker {
+    let coordinate: CLLocationCoordinate2D
+    let title: String
+}
+
+struct MapboxMapView: UIViewRepresentable {
+    var centerCoordinate: CLLocationCoordinate2D
+    var zoomLevel: Double
+    var markers: [MapMarker]
+    var routeCoordinates: [CLLocationCoordinate2D]
+    
+    // This access token should be set in your Info.plist
+    // Replace with your own token or set it through environment variables/configuration
+    private let accessToken = "pk.eyJ1IjoiY2hhaGVsIiwiYSI6ImNtN256cmJrcTA2YXQyam9weWNsdTVhc3MifQ.sVdTV20NrPreOPGmsXlulg"
+    
+    func makeUIView(context: Context) -> MapView {
+        let options = MapInitOptions(resourceOptions: ResourceOptions(accessToken: accessToken), styleURI: .streets)
+        let mapView = MapView(frame: .zero, mapInitOptions: options)
+        
+        // Set the map's center coordinate and zoom level
+        mapView.mapboxMap.setCamera(to: CameraOptions(center: centerCoordinate, zoom: zoomLevel))
+        
+        // Add markers when the map is loaded
+        mapView.mapboxMap.onStyleLoaded.observe { _ in
+            self.addMarkers(to: mapView)
+            self.addRoute(to: mapView)
+        }
+        
+        return mapView
+    }
+    
+    func updateUIView(_ mapView: MapView, context: Context) {
+        // Update the map view if needed
+        mapView.mapboxMap.setCamera(to: CameraOptions(center: centerCoordinate, zoom: zoomLevel))
+    }
+    
+    private func addMarkers(to mapView: MapView) {
+        // Add a point annotation for each marker
+        var pointAnnotations: [PointAnnotation] = []
+        
+        for marker in markers {
+            var pointAnnotation = PointAnnotation(coordinate: marker.coordinate)
+            pointAnnotation.textField = marker.title
+            pointAnnotation.textOffset = [0, 0.7]
+            pointAnnotation.iconImage = "marker"
+            pointAnnotations.append(pointAnnotation)
+        }
+        
+        // Create a point annotation manager
+        let pointAnnotationManager = mapView.annotations.makePointAnnotationManager()
+        pointAnnotationManager.annotations = pointAnnotations
+    }
+    
+    private func addRoute(to mapView: MapView) {
+        // Add a line between the coordinates
+        var lineStringFeature = Feature(geometry: .lineString(LineString(routeCoordinates)))
+        lineStringFeature.properties = ["stroke": .string("#000000"), "stroke-width": .number(4)]
+        
+        // Create a GeoJSON source
+        var geoJSONSource = GeoJSONSource()
+        geoJSONSource.data = .feature(lineStringFeature)
+        
+        // Create a line layer
+        var lineLayer = LineLayer(id: "route-line")
+        lineLayer.source = "route-source"
+        lineLayer.lineColor = .constant(.string("#000000"))
+        lineLayer.lineWidth = .constant(.number(4))
+        
+        // Add the source and layer to the map
+        try? mapView.mapboxMap.style.addSource(geoJSONSource, id: "route-source")
+        try? mapView.mapboxMap.style.addLayer(lineLayer)
+    }
+}
+
+// Preview
+struct MapboxMapView_Previews: PreviewProvider {
+    static var previews: some View {
+        MapboxMapView(
+            centerCoordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+            zoomLevel: 12,
+            markers: [
+                MapMarker(coordinate: CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194), title: "San Francisco"),
+                MapMarker(coordinate: CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730), title: "Golden Gate Bridge")
+            ],
+            routeCoordinates: [
+                CLLocationCoordinate2D(latitude: 37.7749, longitude: -122.4194),
+                CLLocationCoordinate2D(latitude: 37.8086, longitude: -122.4730)
+            ]
+        )
+        .edgesIgnoringSafeArea(.all)
+    }
+} 

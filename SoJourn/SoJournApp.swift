@@ -6,11 +6,17 @@
 //
 
 import SwiftUI
+import MapboxMaps
 
 @main
 struct SoJournApp: App {
     @StateObject private var authManager = AuthenticationManager()
     @StateObject private var tripManager = TripManager.shared
+    
+    init() {
+        // Initialize Mapbox SDK using our configuration class
+        MapboxConfiguration.shared.configure()
+    }
     
     var body: some Scene {
         WindowGroup {
